@@ -32,7 +32,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('logout', [\App\Http\Controllers\Admin\AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
-        // Novel, Entity, dll akan ditambahkan di Step 30–34
+        // Novels — Step 30
+        Route::get('novels', fn() => redirect()->route('admin.dashboard'))->name('novels.index');
+
+        // Entities — Step 31
+        Route::get('entities', fn() => redirect()->route('admin.dashboard'))->name('entities.index');
+
+        // Users — Step 34 (future)
+        Route::get('users', fn() => redirect()->route('admin.dashboard'))->name('users.index');
     });
 
 });
