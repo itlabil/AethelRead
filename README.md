@@ -186,57 +186,6 @@ Uses:
 
 ---
 
-# Repository Structure
-
-```
-aethel-read/
-
-├── android/
-├── backend/
-├── docs/
-│
-├── README.md
-├── LICENSE
-└── .gitignore
-```
-
----
-
-# Documentation
-
-Project documentation is located in:
-
-```
-docs/
-```
-
-Current documents
-
-* D-001 Repository Bootstrap
-* D-002 Project Standards
-* D-003 Project Overview
-* D-004 Glossary
-* D-005 Product Requirements Document
-* D-006 Architecture
-* D-007 Database Design
-* D-008 REST API Design
-
----
-
-# Development Principles
-
-The project follows several core principles.
-
-* Clean Architecture
-* SOLID Principles
-* RESTful API
-* Privacy by Design
-* Offline First
-* Cache First
-* Hash-based Synchronization
-
----
-
 # Versioning
 
 Semantic Versioning (SemVer)
@@ -274,10 +223,6 @@ Aethel Read Team
 Project initiated by:
 
 **Erwin Dianto**
-
-Technical Planning & Architecture:
-
-**OpenAI ChatGPT**
 
 ---
 
