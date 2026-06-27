@@ -14,7 +14,7 @@ class UserFactory extends Factory
         return [
             'name'      => fake()->name(),
             'email'     => fake()->unique()->safeEmail(),
-            'password'  => 'password',
+            'password'  => 'password123',
             'role'      => 'admin',
             'is_active' => true,
         ];
@@ -31,6 +31,7 @@ class UserFactory extends Factory
     {
         return $this->state(fn() => [
             'is_active' => false,
+            'password'  => 'password123',
         ]);
     }
 }

@@ -34,13 +34,20 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     | Novel Routes (Android)
     |----------------------------------------------------------------------
     */
-    // Will be added in Step 24
+    Route::prefix('novels')->name('novels.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NovelController::class, 'index'])->name('index');
+        Route::get('{slug}', [\App\Http\Controllers\Api\NovelController::class, 'show'])->name('show');
+    });
 
     /*
     |----------------------------------------------------------------------
     | Entity Routes (Android)
     |----------------------------------------------------------------------
     */
-    // Will be added in Step 25–26
+    Route::prefix('novels/{novelSlug}')->name('novels.')->group(function () {
+        Route::get('entities', [\App\Http\Controllers\Api\EntityController::class, 'index'])->name('entities.index');
+        Route::post('entities/sync', [\App\Http\Controllers\Api\EntityController::class, 'sync'])->name('entities.sync');
+        Route::get('entities/{entitySlug}', [\App\Http\Controllers\Api\EntityController::class, 'show'])->name('entities.show');
+    });
 
 });

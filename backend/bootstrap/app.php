@@ -1,9 +1,17 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Handle JWT Exceptions
-        $exceptions->render(function (\PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException $e, Request $request) {
+        $exceptions->render(function (TokenExpiredException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -35,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException $e, Request $request) {
+        $exceptions->render(function (TokenInvalidException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -45,7 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException $e, Request $request) {
+        $exceptions->render(function (JWTException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -56,7 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Handle Model Not Found
-        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, Request $request) {
+        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -67,7 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Handle Validation Exception
-        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+        $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
@@ -78,13 +86,35 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Handle Unauthenticated
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthenticated.',
                     'errors'  => null,
                 ], 401);
+            }
+        });
+
+        // Handle Not Found (404)
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource not found.',
+                    'errors'  => null,
+                ], 404);
+            }
+        });
+
+        // Handle Method Not Allowed (405)
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Method not allowed.',
+                    'errors'  => null,
+                ], 405);
             }
         });
     })->create();

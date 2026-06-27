@@ -23,6 +23,17 @@ class AuthController extends ApiController
             if (! $token) {
                 return $this->errorResponse('Invalid credentials', 401);
             }
+
+            // Check if user is active
+            $user = JWTAuth::user();
+            if (! $user->isActive()) {
+                // Only invalidate if blacklist is enabled
+                if (config('jwt.blacklist_enabled')) {
+                    JWTAuth::invalidate($token);
+                }
+                return $this->errorResponse('Your account has been deactivated.', 401);
+            }
+
         } catch (JWTException $e) {
             return $this->errorResponse('Could not create token', 500);
         }
@@ -39,7 +50,9 @@ class AuthController extends ApiController
     public function logout(): JsonResponse
     {
         try {
-            JWTAuth::invalidate(JWTAuth::getToken());
+            if (config('jwt.blacklist_enabled')) {
+                JWTAuth::invalidate(JWTAuth::getToken());
+            }
         } catch (JWTException $e) {
             return $this->errorResponse('Failed to invalidate token', 500);
         }
