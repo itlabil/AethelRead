@@ -14,6 +14,7 @@ trait HasTableFilters
             'direction' => in_array($request->get('direction'), ['asc', 'desc']) ? $request->get('direction') : 'asc',
             'status'    => in_array($request->get('status'), ['active', 'inactive', '']) ? $request->get('status') : '',
             'type'      => $request->get('type', ''),
+            'novel_id'  => $request->get('novel_id', ''),
             'per_page'  => in_array($request->get('per_page'), [15, 30, 50]) ? (int) $request->get('per_page') : 15,
         ];
     }

@@ -24,8 +24,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('{novel}/toggle', [\App\Http\Controllers\Admin\NovelController::class, 'toggle'])->name('toggle');
         });
 
-        // Entities — Step 31
-        Route::get('entities', fn() => redirect()->route('admin.dashboard'))->name('entities.index');
+        // Entities
+        Route::prefix('entities')->name('entities.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EntityController::class, 'index'])->name('index');
+            Route::get('create', [\App\Http\Controllers\Admin\EntityController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\EntityController::class, 'store'])->name('store');
+            Route::get('{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'show'])->name('show');
+            Route::get('{entity}/edit', [\App\Http\Controllers\Admin\EntityController::class, 'edit'])->name('edit');
+            Route::put('{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'update'])->name('update');
+            Route::delete('{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'destroy'])->name('destroy');
+            Route::patch('{entity}/toggle', [\App\Http\Controllers\Admin\EntityController::class, 'toggle'])->name('toggle');
+        });
 
         // Users — future
         Route::get('users', fn() => redirect()->route('admin.dashboard'))->name('users.index');

@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Alias;
 use App\Repositories\Contracts\AliasRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class AliasRepository extends BaseRepository implements AliasRepositoryInterface
 {
@@ -31,6 +32,7 @@ class AliasRepository extends BaseRepository implements AliasRepositoryInterface
     public function createMany(string $entityId, array $names): Collection
     {
         $aliases = collect($names)->map(fn($name) => [
+            'id'         => (string) Str::orderedUuid(),
             'entity_id'  => $entityId,
             'name'       => $name,
             'created_at' => now(),

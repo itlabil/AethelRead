@@ -6,7 +6,8 @@ use App\Models\Image;
 use App\Repositories\Contracts\ImageRepositoryInterface;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Laravel\Facades\Image as ImageProcessor;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ImageService extends BaseService
 {
@@ -142,7 +143,8 @@ class ImageService extends BaseService
         Storage::disk(self::DISK)->makeDirectory(self::PATH_THUMBNAIL);
 
         // Process image: crop to square → resize → encode as WEBP
-        $image = ImageProcessor::read($file->getPathname())
+        $manager = new ImageManager(new Driver());
+        $image   = $manager->read($file->getPathname())
             ->cover(self::THUMBNAIL_SIZE, self::THUMBNAIL_SIZE)
             ->toWebp(quality: 85);
 

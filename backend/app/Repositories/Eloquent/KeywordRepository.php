@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\Keyword;
 use App\Repositories\Contracts\KeywordRepositoryInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class KeywordRepository extends BaseRepository implements KeywordRepositoryInterface
 {
@@ -31,6 +32,7 @@ class KeywordRepository extends BaseRepository implements KeywordRepositoryInter
     public function createMany(string $entityId, array $keywords): Collection
     {
         $records = collect($keywords)->map(fn($keyword) => [
+            'id'         => (string) Str::orderedUuid(),
             'entity_id'  => $entityId,
             'keyword'    => $keyword,
             'created_at' => now(),

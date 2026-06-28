@@ -74,23 +74,34 @@ class EntityService extends BaseService
 
     public function create(array $data): Entity
     {
-        $data['hash'] = $this->generateHash($data);
+        // Pisahkan data relasi dari data model
+        $aliases      = $data['aliases'] ?? [];
+        $keywords     = $data['keywords'] ?? [];
+        $descriptions = $data['descriptions'] ?? [];
 
-        $entity = $this->entityRepository->create($data);
+        // Hanya field yang ada di tabel entities
+        $entityData = [
+            'novel_id'  => $data['novel_id'],
+            'type'      => $data['type'],
+            'name'      => $data['name'],
+            'is_active' => $data['is_active'] ?? true,
+        ];
 
-        // Sync aliases if provided
-        if (! empty($data['aliases'])) {
-            $this->aliasRepository->createMany($entity->id, $data['aliases']);
+        $entityData['hash'] = $this->generateHash($entityData);
+
+        $entity = $this->entityRepository->create($entityData);
+
+        // Sync relasi
+        if (! empty($aliases)) {
+            $this->aliasRepository->createMany($entity->id, $aliases);
         }
 
-        // Sync keywords if provided
-        if (! empty($data['keywords'])) {
-            $this->keywordRepository->createMany($entity->id, $data['keywords']);
+        if (! empty($keywords)) {
+            $this->keywordRepository->createMany($entity->id, $keywords);
         }
 
-        // Sync descriptions if provided
-        if (! empty($data['descriptions'])) {
-            foreach ($data['descriptions'] as $locale => $content) {
+        foreach ($descriptions as $locale => $content) {
+            if (! empty($content)) {
                 $this->descriptionRepository->upsert($entity->id, $locale, $content);
             }
         }
@@ -100,32 +111,43 @@ class EntityService extends BaseService
 
     public function update(string $id, array $data): Entity
     {
+        // Pisahkan data relasi
+        $aliases      = $data['aliases'] ?? null;
+        $keywords     = $data['keywords'] ?? null;
+        $descriptions = $data['descriptions'] ?? [];
+
+        // Hanya field yang ada di tabel entities
+        $entityData = array_filter([
+            'novel_id'  => $data['novel_id'] ?? null,
+            'type'      => $data['type'] ?? null,
+            'name'      => $data['name'] ?? null,
+            'is_active' => $data['is_active'] ?? null,
+        ], fn($value) => ! is_null($value));
+
         $entity = $this->entityRepository->findByIdOrFail($id);
+        $entityData['hash'] = $this->generateHash(array_merge($entity->toArray(), $entityData));
 
-        // Regenerate hash on update
-        $data['hash'] = $this->generateHash(array_merge($entity->toArray(), $data));
+        $entity = $this->entityRepository->update($id, $entityData);
 
-        $entity = $this->entityRepository->update($id, $data);
-
-        // Sync aliases if provided
-        if (isset($data['aliases'])) {
+        // Sync aliases
+        if ($aliases !== null) {
             $this->aliasRepository->deleteAllByEntity($id);
-            if (! empty($data['aliases'])) {
-                $this->aliasRepository->createMany($id, $data['aliases']);
+            if (! empty($aliases)) {
+                $this->aliasRepository->createMany($id, $aliases);
             }
         }
 
-        // Sync keywords if provided
-        if (isset($data['keywords'])) {
+        // Sync keywords
+        if ($keywords !== null) {
             $this->keywordRepository->deleteAllByEntity($id);
-            if (! empty($data['keywords'])) {
-                $this->keywordRepository->createMany($id, $data['keywords']);
+            if (! empty($keywords)) {
+                $this->keywordRepository->createMany($id, $keywords);
             }
         }
 
-        // Sync descriptions if provided
-        if (! empty($data['descriptions'])) {
-            foreach ($data['descriptions'] as $locale => $content) {
+        // Sync descriptions
+        foreach ($descriptions as $locale => $content) {
+            if (! empty($content)) {
                 $this->descriptionRepository->upsert($id, $locale, $content);
             }
         }
@@ -192,5 +214,57 @@ class EntityService extends BaseService
     public function isValidType(string $type): bool
     {
         return in_array($type, $this->getValidTypes());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | findByIdOrFail
+    |--------------------------------------------------------------------------
+    */
+
+    public function findByIdOrFail(string $id): Entity
+    {
+        return $this->entityRepository->findByIdOrFail($id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | getFilteredPaginated
+    |--------------------------------------------------------------------------
+    */
+
+    public function getFilteredPaginated(array $filters): LengthAwarePaginator
+    {
+        $query = $this->entityRepository->query();
+
+        // Search
+        if (! empty($filters['search'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'ilike', "%{$filters['search']}%")
+                ->orWhere('slug', 'ilike', "%{$filters['search']}%");
+            });
+        }
+
+        // Filter by novel
+        if (! empty($filters['novel_id'])) {
+            $query->where('novel_id', $filters['novel_id']);
+        }
+
+        // Filter by type
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        // Filter by status
+        if ($filters['status'] === 'active') {
+            $query->where('is_active', true);
+        } elseif ($filters['status'] === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        // Sort
+        $query->orderBy($filters['sort'], $filters['direction']);
+
+        return $query->with('novel')->paginate($filters['per_page'])->withQueryString();
     }
 }

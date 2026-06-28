@@ -1,0 +1,190 @@
+@extends('admin.layouts.app')
+
+@section('title', 'Add Entity')
+@section('header', 'Add Entity')
+@section('subheader', 'Create a new entity')
+
+@section('content')
+<div class="max-w-3xl">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+
+        <form method="POST" action="{{ route('admin.entities.store') }}" enctype="multipart/form-data">
+            @csrf
+
+            {{-- Novel --}}
+            <div class="mb-5">
+                <label for="novel_id" class="block text-sm font-medium text-gray-700 mb-1">
+                    Novel <span class="text-red-500">*</span>
+                </label>
+                <select
+                    id="novel_id"
+                    name="novel_id"
+                    class="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
+                        {{ $errors->has('novel_id') ? 'border-red-300 bg-red-50' : 'border-gray-300' }}"
+                >
+                    <option value="">Select novel</option>
+                    @foreach ($novels as $novel)
+                        <option value="{{ $novel->id }}" {{ old('novel_id') === $novel->id ? 'selected' : '' }}>
+                            {{ $novel->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('novel_id')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Type --}}
+            <div class="mb-5">
+                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">
+                    Type <span class="text-red-500">*</span>
+                </label>
+                <select
+                    id="type"
+                    name="type"
+                    class="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
+                        {{ $errors->has('type') ? 'border-red-300 bg-red-50' : 'border-gray-300' }}"
+                >
+                    <option value="">Select type</option>
+                    @foreach (['character' => 'Character', 'place' => 'Place', 'item' => 'Item'] as $value => $label)
+                        <option value="{{ $value }}" {{ old('type') === $value ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('type')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Name --}}
+            <div class="mb-5">
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                    Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value="{{ old('name') }}"
+                    class="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
+                        {{ $errors->has('name') ? 'border-red-300 bg-red-50' : 'border-gray-300' }}"
+                    placeholder="e.g. Cheon Yeo-Woon"
+                />
+                @error('name')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Aliases --}}
+            <div class="mb-5">
+                <label for="aliases_text" class="block text-sm font-medium text-gray-700 mb-1">
+                    Aliases
+                    <span class="text-gray-400 font-normal">(one per line)</span>
+                </label>
+                <textarea
+                    id="aliases_text"
+                    name="aliases_text"
+                    rows="3"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Heavenly Demon&#10;Young Master Cheon&#10;Nano Machine User"
+                >{{ old('aliases_text') }}</textarea>
+            </div>
+
+            {{-- Keywords --}}
+            <div class="mb-5">
+                <label for="keywords_text" class="block text-sm font-medium text-gray-700 mb-1">
+                    Keywords
+                    <span class="text-gray-400 font-normal">(one per line)</span>
+                </label>
+                <textarea
+                    id="keywords_text"
+                    name="keywords_text"
+                    rows="3"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="cheon&#10;yeo-woon&#10;nano"
+                >{{ old('keywords_text') }}</textarea>
+            </div>
+
+            {{-- Description EN --}}
+            <div class="mb-5">
+                <label for="description_en" class="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                    <span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full ml-1">English</span>
+                </label>
+                <textarea
+                    id="description_en"
+                    name="description_en"
+                    rows="4"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Enter English description..."
+                >{{ old('description_en') }}</textarea>
+            </div>
+
+            {{-- Description ID --}}
+            <div class="mb-5">
+                <label for="description_id" class="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                    <span class="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full ml-1">Indonesian</span>
+                </label>
+                <textarea
+                    id="description_id"
+                    name="description_id"
+                    rows="4"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Masukkan deskripsi Bahasa Indonesia..."
+                >{{ old('description_id') }}</textarea>
+            </div>
+
+            {{-- Image --}}
+            <div class="mb-5">
+                <label for="image" class="block text-sm font-medium text-gray-700 mb-1">
+                    Image
+                    <span class="text-gray-400 font-normal">(max 2MB, jpeg/jpg/png/webp)</span>
+                </label>
+                <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+                @error('image')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Is Active --}}
+            <div class="mb-6">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        name="is_active"
+                        value="1"
+                        {{ old('is_active', '1') ? 'checked' : '' }}
+                        class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span class="text-sm text-gray-700">Active</span>
+                </label>
+            </div>
+
+            {{-- Actions --}}
+            <div class="flex items-center gap-3">
+                <button
+                    type="submit"
+                    class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition"
+                >
+                    Save Entity
+                </button>
+                
+                <a href="{{ route('admin.entities.index') }}"
+                    class="px-6 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition"
+                >
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+@endsection

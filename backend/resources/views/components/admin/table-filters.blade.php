@@ -1,13 +1,14 @@
 @props([
     'route',
     'filters',
-    'types'    => [],
-    'showType' => false,
+    'types'     => [],
+    'showType'  => false,
+    'novels'    => [],
+    'showNovel' => false,
 ])
 
 <div class="px-6 py-4 border-b border-gray-100">
-    <form method="GET" action="{{ $route }}" x-data>
-
+    <form method="GET" action="{{ $route }}">
         <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
 
             {{-- Search --}}
@@ -25,6 +26,22 @@
                     />
                 </div>
             </div>
+
+            {{-- Novel Filter --}}
+            @if ($showNovel && count($novels) > 0)
+                <select
+                    name="novel_id"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    onchange="this.form.submit()"
+                >
+                    <option value="">All Novels</option>
+                    @foreach ($novels as $novel)
+                        <option value="{{ $novel->id }}" {{ $filters['novel_id'] === $novel->id ? 'selected' : '' }}>
+                            {{ $novel->name }}
+                        </option>
+                    @endforeach
+                </select>
+            @endif
 
             {{-- Type Filter --}}
             @if ($showType && count($types) > 0)
@@ -93,7 +110,7 @@
             </button>
 
             {{-- Reset --}}
-            @if ($filters['search'] || $filters['status'] || $filters['type'])
+            @if ($filters['search'] || $filters['status'] || $filters['type'] || $filters['novel_id'])
                 
                 <a href="{{ $route }}"
                     class="px-4 py-2 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition"
@@ -103,6 +120,5 @@
             @endif
 
         </div>
-
     </form>
 </div>
