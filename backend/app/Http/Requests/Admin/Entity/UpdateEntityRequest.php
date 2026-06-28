@@ -14,16 +14,16 @@ class UpdateEntityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'novel_id'        => ['required', 'uuid', 'exists:novels,id'],
-            'type'            => ['required', 'in:character,place,item'],
-            'name'            => ['required', 'string', 'max:255'],
-            'is_active'       => ['sometimes', 'boolean'],
-            'aliases'         => ['sometimes', 'array'],
-            'aliases.*'       => ['string', 'max:255'],
-            'keywords'        => ['sometimes', 'array'],
-            'keywords.*'      => ['string', 'max:255'],
-            'description_en'  => ['sometimes', 'nullable', 'string'],
-            'description_id'  => ['sometimes', 'nullable', 'string'],
+            'novel_id'       => ['required', 'uuid', 'exists:novels,id'],
+            'type'           => ['required', 'in:character,place,item'],
+            'name'           => ['required', 'string', 'max:255'],
+            'is_active'      => ['sometimes', 'boolean'],
+            'aliases'        => ['sometimes', 'array'],
+            'aliases.*'      => ['string', 'max:255', 'distinct'],
+            'keywords'       => ['sometimes', 'array'],
+            'keywords.*'     => ['string', 'max:255', 'distinct'],
+            'description_en' => ['sometimes', 'nullable', 'string'],
+            'description_id' => ['sometimes', 'nullable', 'string'],
         ];
     }
 

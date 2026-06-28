@@ -48,9 +48,9 @@ class EntityController extends AdminController
     {
         $data = $request->validated();
 
-        // Parse aliases & keywords dari textarea
-        $data['aliases']  = $this->parseLines($request->input('aliases_text', ''));
-        $data['keywords'] = $this->parseLines($request->input('keywords_text', ''));
+        // Aliases & keywords sudah array dari dynamic list
+        $data['aliases']  = $request->input('aliases', []);
+        $data['keywords'] = $request->input('keywords', []);
 
         // Parse descriptions
         $data['descriptions'] = array_filter([
@@ -60,7 +60,6 @@ class EntityController extends AdminController
 
         $entity = $this->entityService->create($data);
 
-        // Upload image jika ada
         if ($request->hasFile('image')) {
             $this->imageService->upload($entity->id, $request->file('image'));
         }
@@ -91,8 +90,8 @@ class EntityController extends AdminController
     {
         $data = $request->validated();
 
-        $data['aliases']  = $this->parseLines($request->input('aliases_text', ''));
-        $data['keywords'] = $this->parseLines($request->input('keywords_text', ''));
+        $data['aliases']  = $request->input('aliases', []);
+        $data['keywords'] = $request->input('keywords', []);
 
         $data['descriptions'] = array_filter([
             'en' => $request->input('description_en'),
@@ -125,14 +124,5 @@ class EntityController extends AdminController
         $this->entityService->toggleActive($id);
 
         return back()->with('success', 'Entity status updated.');
-    }
-
-    private function parseLines(string $text): array
-    {
-        return collect(explode("\n", $text))
-            ->map(fn($line) => trim($line))
-            ->filter(fn($line) => $line !== '')
-            ->values()
-            ->toArray();
     }
 }

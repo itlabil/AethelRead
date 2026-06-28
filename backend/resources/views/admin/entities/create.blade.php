@@ -78,32 +78,22 @@
 
             {{-- Aliases --}}
             <div class="mb-5">
-                <label for="aliases_text" class="block text-sm font-medium text-gray-700 mb-1">
-                    Aliases
-                    <span class="text-gray-400 font-normal">(one per line)</span>
-                </label>
-                <textarea
-                    id="aliases_text"
-                    name="aliases_text"
-                    rows="3"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Heavenly Demon&#10;Young Master Cheon&#10;Nano Machine User"
-                >{{ old('aliases_text') }}</textarea>
+                <x-admin.dynamic-list
+                    name="aliases"
+                    label="Aliases"
+                    placeholder="e.g. Heavenly Demon"
+                    :items="old('aliases', [])"
+                />
             </div>
 
             {{-- Keywords --}}
             <div class="mb-5">
-                <label for="keywords_text" class="block text-sm font-medium text-gray-700 mb-1">
-                    Keywords
-                    <span class="text-gray-400 font-normal">(one per line)</span>
-                </label>
-                <textarea
-                    id="keywords_text"
-                    name="keywords_text"
-                    rows="3"
-                    class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="cheon&#10;yeo-woon&#10;nano"
-                >{{ old('keywords_text') }}</textarea>
+                <x-admin.dynamic-list
+                    name="keywords"
+                    label="Keywords"
+                    placeholder="e.g. cheon"
+                    :items="old('keywords', [])"
+                />
             </div>
 
             {{-- Description EN --}}
