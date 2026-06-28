@@ -7,68 +7,84 @@
     <title>@yield('title', 'Aethel Read') — Admin</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full bg-gray-50 font-sans antialiased" x-data>
+<body class="h-full bg-gray-50 font-sans antialiased" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
 
     <div class="min-h-screen flex">
+
+        {{-- Mobile Overlay --}}
+        <div
+            x-show="sidebarOpen"
+            x-transition:enter="transition-opacity ease-linear duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-linear duration-300"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="sidebarOpen = false"
+            class="fixed inset-0 bg-black/50 z-20 lg:hidden"
+        ></div>
 
         {{-- Sidebar --}}
         @include('admin.partials.sidebar')
 
         {{-- Main Content --}}
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 lg:ml-0">
 
             {{-- Topbar --}}
             @include('admin.partials.topbar')
 
             {{-- Page Content --}}
-            <main class="flex-1 p-6">
+            <main class="flex-1 p-4 lg:p-6">
 
-                {{-- Page Header --}}
                 @hasSection('header')
                     <div class="mb-6">
-                        <h1 class="text-2xl font-bold text-gray-900">
-                            @yield('header')
-                        </h1>
+                        <h1 class="text-xl lg:text-2xl font-bold text-gray-900">@yield('header')</h1>
                         @hasSection('subheader')
-                            <p class="text-sm text-gray-500 mt-1">
-                                @yield('subheader')
-                            </p>
+                            <p class="text-sm text-gray-500 mt-1">@yield('subheader')</p>
                         @endif
                     </div>
                 @endif
 
-                {{-- Flash Messages --}}
-                @if (session('success'))
-                    <div
-                        x-data="{ show: true }"
-                        x-show="show"
-                        x-init="setTimeout(() => show = false, 4000)"
-                        class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between"
-                    >
-                        <p class="text-sm text-green-700">{{ session('success') }}</p>
-                        <button @click="show = false" class="text-green-400 hover:text-green-600">✕</button>
-                    </div>
-                @endif
-
-                @if (session('error'))
-                    <div
-                        x-data="{ show: true }"
-                        x-show="show"
-                        x-init="setTimeout(() => show = false, 4000)"
-                        class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
-                    >
-                        <p class="text-sm text-red-700">{{ session('error') }}</p>
-                        <button @click="show = false" class="text-red-400 hover:text-red-600">✕</button>
-                    </div>
-                @endif
-
-                {{-- Content --}}
                 @yield('content')
 
             </main>
-
         </div>
     </div>
+
+    {{-- Toast Notifications --}}
+    @if (session('success'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: '{{ session('success') }}',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: { popup: '!rounded-2xl !text-sm' },
+                });
+            });
+        </script>
+    @endif
+
+    @if (session('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: '{{ session('error') }}',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: { popup: '!rounded-2xl !text-sm' },
+                });
+            });
+        </script>
+    @endif
 
 </body>
 </html>

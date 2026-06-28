@@ -1,16 +1,26 @@
-<header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+<header class="bg-white border-b border-gray-200 px-4 lg:px-6 py-4 flex items-center justify-between shrink-0">
 
-    {{-- Page Title (mobile) --}}
-    <div class="flex items-center gap-2">
-        <h2 class="text-sm font-medium text-gray-500">
+    <div class="flex items-center gap-3">
+
+        {{-- Hamburger (Mobile only) --}}
+        <button
+            @click="sidebarOpen = true"
+            class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition"
+        >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        {{-- Page Title --}}
+        <h2 class="text-sm font-medium text-gray-500 hidden sm:block">
             @yield('title', 'Dashboard')
         </h2>
+
     </div>
 
     {{-- Right Side --}}
     <div class="flex items-center gap-4" x-data="{ open: false }">
-
-        {{-- User Menu --}}
         <div class="relative">
             <button
                 @click="open = !open"
@@ -30,7 +40,6 @@
                 </svg>
             </button>
 
-            {{-- Dropdown --}}
             <div
                 x-show="open"
                 @click.outside="open = false"
@@ -40,7 +49,6 @@
                 <div class="px-4 py-2 border-b border-gray-100">
                     <p class="text-xs text-gray-500 truncate">{{ auth('web')->user()->email }}</p>
                 </div>
-
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf
                     <button
@@ -52,7 +60,6 @@
                 </form>
             </div>
         </div>
-
     </div>
 
 </header>

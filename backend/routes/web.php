@@ -2,47 +2,35 @@
 
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes — Aethel Read Admin Panel
-|--------------------------------------------------------------------------
-| Auth     : Laravel Session
-| Consumer : Admin Panel (Blade)
-|
-*/
-
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    /*
-    |----------------------------------------------------------------------
-    | Guest Routes (belum login)
-    |----------------------------------------------------------------------
-    */
     Route::middleware('guest')->group(function () {
         Route::get('login', [\App\Http\Controllers\Admin\AuthController::class, 'showLogin'])->name('login');
         Route::post('login', [\App\Http\Controllers\Admin\AuthController::class, 'login'])->name('login.post');
     });
 
-    /*
-    |----------------------------------------------------------------------
-    | Authenticated Routes (sudah login)
-    |----------------------------------------------------------------------
-    */
     Route::middleware('auth')->group(function () {
         Route::post('logout', [\App\Http\Controllers\Admin\AuthController::class, 'logout'])->name('logout');
         Route::get('dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
-        // Novels — Step 30
-        Route::get('novels', fn() => redirect()->route('admin.dashboard'))->name('novels.index');
+        // Novels
+        Route::prefix('novels')->name('novels.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\NovelController::class, 'index'])->name('index');
+            Route::get('create', [\App\Http\Controllers\Admin\NovelController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\NovelController::class, 'store'])->name('store');
+            Route::get('{novel}/edit', [\App\Http\Controllers\Admin\NovelController::class, 'edit'])->name('edit');
+            Route::put('{novel}', [\App\Http\Controllers\Admin\NovelController::class, 'update'])->name('update');
+            Route::delete('{novel}', [\App\Http\Controllers\Admin\NovelController::class, 'destroy'])->name('destroy');
+            Route::patch('{novel}/toggle', [\App\Http\Controllers\Admin\NovelController::class, 'toggle'])->name('toggle');
+        });
 
         // Entities — Step 31
         Route::get('entities', fn() => redirect()->route('admin.dashboard'))->name('entities.index');
 
-        // Users — Step 34 (future)
+        // Users — future
         Route::get('users', fn() => redirect()->route('admin.dashboard'))->name('users.index');
     });
 
 });
 
-// Redirect root ke admin login
 Route::get('/', fn() => redirect()->route('admin.login'));

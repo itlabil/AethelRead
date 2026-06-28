@@ -122,4 +122,51 @@ class NovelService extends BaseService
 
         return $novel->hash === $clientHash;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Find By Id Or Fail
+    |--------------------------------------------------------------------------
+    */
+
+    public function findByIdOrFail(string $id): Novel
+    {
+        return $this->novelRepository->findByIdOrFail($id);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get Filtered Paginated
+    |--------------------------------------------------------------------------
+    */
+
+    public function getFilteredPaginated(array $filters): LengthAwarePaginator
+    {
+        $query = $this->novelRepository->query();
+
+        // Search
+        if (! empty($filters['search'])) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'ilike', "%{$filters['search']}%")
+                ->orWhere('slug', 'ilike', "%{$filters['search']}%");
+            });
+        }
+
+        // Filter by type
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        // Filter by status
+        if ($filters['status'] === 'active') {
+            $query->where('is_active', true);
+        } elseif ($filters['status'] === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        // Sort
+        $query->orderBy($filters['sort'], $filters['direction']);
+
+        return $query->paginate($filters['per_page'])->withQueryString();
+    }
 }

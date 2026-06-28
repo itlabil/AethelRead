@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Repositories\Contracts\RepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -52,5 +53,10 @@ abstract class BaseRepository implements RepositoryInterface
         $model = $this->findByIdOrFail($id);
 
         return $model->delete();
+    }
+
+    public function query(): Builder
+    {
+        return $this->model->newQuery();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,5 +39,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Hindari fitur vendor-specific, gunakan standard SQL
         DB::prohibitDestructiveCommands(app()->isProduction());
+
+        // Register admin blade components
+        Blade::componentNamespace('App\\View\\Components\\Admin', 'admin');
     }
 }

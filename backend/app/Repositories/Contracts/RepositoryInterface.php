@@ -14,6 +14,8 @@ interface RepositoryInterface
 
     public function findById(string $id): ?Model;
 
+    public function findByIdOrFail(string $id): Model;
+
     public function create(array $data): Model;
 
     public function update(string $id, array $data): Model;
