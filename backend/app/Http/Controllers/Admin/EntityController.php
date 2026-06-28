@@ -125,4 +125,11 @@ class EntityController extends AdminController
 
         return back()->with('success', 'Entity status updated.');
     }
+
+    public function destroyImage(string $id): RedirectResponse
+    {
+        $this->imageService->delete($id);
+
+        return back()->with('success', 'Image deleted successfully.');
+    }
 }

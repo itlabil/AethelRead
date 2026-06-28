@@ -34,6 +34,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'update'])->name('update');
             Route::delete('{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'destroy'])->name('destroy');
             Route::patch('{entity}/toggle', [\App\Http\Controllers\Admin\EntityController::class, 'toggle'])->name('toggle');
+            Route::delete('{entity}/image', [\App\Http\Controllers\Admin\EntityController::class, 'destroyImage'])->name('image.destroy');
         });
 
         // Users — future
