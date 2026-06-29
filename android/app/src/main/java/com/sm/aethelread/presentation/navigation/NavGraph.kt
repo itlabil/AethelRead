@@ -5,16 +5,24 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.sm.aethelread.presentation.entitydetail.EntityDetailScreen
 import com.sm.aethelread.presentation.entitylist.EntityListScreen
 import com.sm.aethelread.presentation.novelselection.NovelSelectionScreen
 
 sealed class Screen(val route: String) {
     data object NovelSelection : Screen("novel_selection")
-    data object EntityList     : Screen("entity_list/{novelSlug}/{novelName}") {
+
+    data object EntityList : Screen("entity_list/{novelSlug}/{novelName}") {
         fun createRoute(slug: String, name: String) =
             "entity_list/$slug/${name.replace("/", "_")}"
     }
-    data object Settings       : Screen("settings")
+
+    data object EntityDetail : Screen("entity_detail/{novelSlug}/{entitySlug}") {
+        fun createRoute(novelSlug: String, entitySlug: String) =
+            "entity_detail/$novelSlug/$entitySlug"
+    }
+
+    data object Settings : Screen("settings")
 }
 
 @Composable
@@ -40,13 +48,26 @@ fun AethelReadNavGraph(
             val novelName = backStackEntry.arguments?.getString("novelName") ?: ""
 
             EntityListScreen(
-                novelSlug   = novelSlug,
-                novelName   = novelName,
-                ocrText     = "",
+                novelSlug     = novelSlug,
+                novelName     = novelName,
+                ocrText       = "",
                 onEntityClick = { entity ->
-                    // Entity detail — Step 8
+                    navController.navigate(
+                        Screen.EntityDetail.createRoute(novelSlug, entity.slug)
+                    )
                 },
-                onBack      = { navController.popBackStack() },
+                onBack        = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.EntityDetail.route) { backStackEntry ->
+            val novelSlug  = backStackEntry.arguments?.getString("novelSlug") ?: ""
+            val entitySlug = backStackEntry.arguments?.getString("entitySlug") ?: ""
+
+            EntityDetailScreen(
+                novelSlug  = novelSlug,
+                entitySlug = entitySlug,
+                onBack     = { navController.popBackStack() },
             )
         }
     }
