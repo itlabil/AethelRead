@@ -1,0 +1,26 @@
+package com.sm.aethelread.data.remote.interceptor
+
+import okhttp3.Interceptor
+import okhttp3.Response
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AuthInterceptor @Inject constructor() : Interceptor {
+
+    private var token: String? = null
+
+    fun setToken(token: String?) {
+        this.token = token
+    }
+
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request().newBuilder().apply {
+            addHeader("Accept", "application/json")
+            addHeader("Content-Type", "application/json")
+            token?.let { addHeader("Authorization", "Bearer $it") }
+        }.build()
+
+        return chain.proceed(request)
+    }
+}
