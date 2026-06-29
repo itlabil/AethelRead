@@ -5,10 +5,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.sm.aethelread.presentation.entitylist.EntityListScreen
 import com.sm.aethelread.presentation.novelselection.NovelSelectionScreen
 
 sealed class Screen(val route: String) {
     data object NovelSelection : Screen("novel_selection")
+    data object EntityList     : Screen("entity_list/{novelSlug}/{novelName}") {
+        fun createRoute(slug: String, name: String) =
+            "entity_list/$slug/${name.replace("/", "_")}"
+    }
     data object Settings       : Screen("settings")
 }
 
@@ -22,12 +27,27 @@ fun AethelReadNavGraph(
     ) {
         composable(Screen.NovelSelection.route) {
             NovelSelectionScreen(
-                onNovelSelected = {
-                    // Akan diupdate di step berikutnya
+                onNovelSelected = { novel ->
+                    navController.navigate(
+                        Screen.EntityList.createRoute(novel.slug, novel.name)
+                    )
                 },
             )
         }
 
-        // Screens lain akan ditambahkan di step berikutnya
+        composable(Screen.EntityList.route) { backStackEntry ->
+            val novelSlug = backStackEntry.arguments?.getString("novelSlug") ?: ""
+            val novelName = backStackEntry.arguments?.getString("novelName") ?: ""
+
+            EntityListScreen(
+                novelSlug   = novelSlug,
+                novelName   = novelName,
+                ocrText     = "",
+                onEntityClick = { entity ->
+                    // Entity detail — Step 8
+                },
+                onBack      = { navController.popBackStack() },
+            )
+        }
     }
 }
