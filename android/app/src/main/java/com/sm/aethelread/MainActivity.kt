@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.sm.aethelread.presentation.navigation.AethelReadNavGraph
 import com.sm.aethelread.presentation.theme.AethelReadTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -16,7 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AethelReadTheme {
-                // Navigation akan ditambahkan di Step 18
+                AethelReadNavGraph()
             }
         }
     }
