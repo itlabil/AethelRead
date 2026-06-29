@@ -8,6 +8,7 @@ import androidx.navigation.compose.rememberNavController
 import com.sm.aethelread.presentation.entitydetail.EntityDetailScreen
 import com.sm.aethelread.presentation.entitylist.EntityListScreen
 import com.sm.aethelread.presentation.novelselection.NovelSelectionScreen
+import com.sm.aethelread.presentation.settings.SettingsScreen
 
 sealed class Screen(val route: String) {
     data object NovelSelection : Screen("novel_selection")
@@ -40,6 +41,9 @@ fun AethelReadNavGraph(
                         Screen.EntityList.createRoute(novel.slug, novel.name)
                     )
                 },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                },
             )
         }
 
@@ -68,6 +72,12 @@ fun AethelReadNavGraph(
                 novelSlug  = novelSlug,
                 entitySlug = entitySlug,
                 onBack     = { navController.popBackStack() },
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
             )
         }
     }
