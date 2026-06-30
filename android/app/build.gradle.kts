@@ -25,7 +25,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            buildConfigField("String", "BASE_URL", "\"http://192.168.0.112:8000/api/v1/\"")
+            buildConfigField("String", "BASE_URL", "\"http://10.229.15.190:8000/api/v1/\"")
         }
         release {
             isMinifyEnabled = true

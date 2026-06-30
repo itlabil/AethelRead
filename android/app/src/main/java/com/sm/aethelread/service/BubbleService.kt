@@ -293,6 +293,7 @@ class BubbleService : Service() {
                 val novelSlug = prefs.selectedNovelSlug
 
                 if (novelSlug == null) {
+                    showToast("Please select a novel first.")
                     onScanStateChanged?.invoke(false)
                     return@launch
                 }
@@ -300,6 +301,7 @@ class BubbleService : Service() {
                 val bitmap = screenCaptureManager.captureScreen()
 
                 if (bitmap == null) {
+                    showToast("Failed to capture screen. Try again.")
                     onScanStateChanged?.invoke(false)
                     return@launch
                 }
@@ -308,17 +310,23 @@ class BubbleService : Service() {
                 bitmap.recycle()
 
                 if (ocrResult.isSuccess && ocrResult.fullText.isNotBlank()) {
-                    android.util.Log.d("BubbleService", "OCR success, bringing app to foreground")
                     bringAppToForeground()
-                    android.util.Log.d("BubbleService", "Invoking onOcrResult callback, callback is null=${onOcrResult == null}")
                     onOcrResult?.invoke(ocrResult.fullText)
-                    android.util.Log.d("BubbleService", "onOcrResult invoked")
+                } else {
+                    showToast("No text detected on screen.")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                showToast("Scan failed. Please try again.")
             } finally {
                 onScanStateChanged?.invoke(false)
             }
+        }
+    }
+
+    private fun showToast(message: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 

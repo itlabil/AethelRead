@@ -5,6 +5,7 @@ import com.sm.aethelread.domain.model.Novel
 import com.sm.aethelread.domain.usecase.GetNovelsUseCase
 import com.sm.aethelread.domain.usecase.SaveSelectedNovelUseCase
 import com.sm.aethelread.presentation.base.BaseViewModel
+import com.sm.aethelread.util.NetworkObserver
 import com.sm.aethelread.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -15,6 +16,7 @@ data class NovelSelectionUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedNovelSlug: String? = null,
+    val isOffline: Boolean = false,
 )
 
 sealed class NovelSelectionEvent {
@@ -26,16 +28,26 @@ sealed class NovelSelectionEvent {
 class NovelSelectionViewModel @Inject constructor(
     private val getNovelsUseCase: GetNovelsUseCase,
     private val saveSelectedNovelUseCase: SaveSelectedNovelUseCase,
+    private val networkObserver: NetworkObserver,
 ) : BaseViewModel<NovelSelectionUiState>(NovelSelectionUiState()) {
 
     init {
+        observeNetwork()
         loadNovels()
     }
 
     fun onEvent(event: NovelSelectionEvent) {
         when (event) {
             is NovelSelectionEvent.SelectNovel -> selectNovel(event.novel)
-            is NovelSelectionEvent.Refresh     -> loadNovels()
+            is NovelSelectionEvent.Refresh      -> loadNovels()
+        }
+    }
+
+    private fun observeNetwork() {
+        viewModelScope.launch {
+            networkObserver.observe().collect { isConnected ->
+                updateState { copy(isOffline = !isConnected) }
+            }
         }
     }
 
@@ -51,8 +63,12 @@ class NovelSelectionViewModel @Inject constructor(
                             error     = null,
                         )
                     }
-                    is Resource.Error   -> updateState {
-                        copy(isLoading = false, error = resource.message)
+                    is Resource.Error -> updateState {
+                        copy(
+                            isLoading = false,
+                            // Hanya tampilkan error jika tidak ada data cache sama sekali
+                            error = if (novels.isEmpty()) resource.message else null,
+                        )
                     }
                 }
             }

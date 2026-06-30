@@ -42,6 +42,8 @@ import com.sm.aethelread.domain.model.Novel
 import com.sm.aethelread.presentation.components.EmptyState
 import com.sm.aethelread.presentation.components.ErrorMessage
 import com.sm.aethelread.presentation.components.LoadingIndicator
+import androidx.compose.foundation.layout.Column
+import com.sm.aethelread.presentation.components.OfflineBanner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,50 +87,53 @@ fun NovelSelectionScreen(
         },
     ) { paddingValues ->
 
-        PullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh    = { viewModel.onEvent(NovelSelectionEvent.Refresh) },
-            modifier     = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
-            when {
-                uiState.isLoading && uiState.novels.isEmpty() -> {
-                    LoadingIndicator()
-                }
+        Column(modifier = Modifier.padding(paddingValues)) {
 
-                uiState.error != null && uiState.novels.isEmpty() -> {
-                    ErrorMessage(
-                        message = uiState.error!!,
-                        onRetry = { viewModel.onEvent(NovelSelectionEvent.Refresh) },
-                    )
-                }
+            OfflineBanner(isVisible = uiState.isOffline)
 
-                uiState.novels.isEmpty() -> {
-                    EmptyState(
-                        title    = "No novels available",
-                        subtitle = "Pull down to refresh",
-                    )
-                }
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh    = { viewModel.onEvent(NovelSelectionEvent.Refresh) },
+                modifier     = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    uiState.isLoading && uiState.novels.isEmpty() -> {
+                        LoadingIndicator()
+                    }
 
-                else -> {
-                    LazyColumn(
-                        modifier            = Modifier.fillMaxSize(),
-                        contentPadding      = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(
-                            items = uiState.novels,
-                            key   = { it.slug },
-                        ) { novel ->
-                            NovelCard(
-                                novel      = novel,
-                                isSelected = novel.slug == uiState.selectedNovelSlug,
-                                onClick    = {
-                                    viewModel.onEvent(NovelSelectionEvent.SelectNovel(novel))
-                                    onNovelSelected(novel)
-                                },
-                            )
+                    uiState.error != null && uiState.novels.isEmpty() -> {
+                        ErrorMessage(
+                            message = uiState.error!!,
+                            onRetry = { viewModel.onEvent(NovelSelectionEvent.Refresh) },
+                        )
+                    }
+
+                    uiState.novels.isEmpty() -> {
+                        EmptyState(
+                            title    = "No novels available",
+                            subtitle = "Pull down to refresh",
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier            = Modifier.fillMaxSize(),
+                            contentPadding      = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(
+                                items = uiState.novels,
+                                key   = { it.slug },
+                            ) { novel ->
+                                NovelCard(
+                                    novel      = novel,
+                                    isSelected = novel.slug == uiState.selectedNovelSlug,
+                                    onClick    = {
+                                        viewModel.onEvent(NovelSelectionEvent.SelectNovel(novel))
+                                        onNovelSelected(novel)
+                                    },
+                                )
+                            }
                         }
                     }
                 }

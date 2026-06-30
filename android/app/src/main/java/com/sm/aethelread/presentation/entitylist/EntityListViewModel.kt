@@ -5,6 +5,7 @@ import com.sm.aethelread.data.local.preferences.PreferencesManager
 import com.sm.aethelread.domain.usecase.RecognizeEntitiesUseCase
 import com.sm.aethelread.domain.usecase.SyncEntitiesUseCase
 import com.sm.aethelread.presentation.base.BaseViewModel
+import com.sm.aethelread.util.NetworkObserver
 import com.sm.aethelread.util.RecognitionMatch
 import com.sm.aethelread.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ data class EntityListUiState(
     val ocrText: String = "",
     val novelSlug: String = "",
     val novelName: String = "",
+    val isOffline: Boolean = false,
 )
 
 sealed class EntityListEvent {
@@ -35,7 +37,12 @@ class EntityListViewModel @Inject constructor(
     private val recognizeEntitiesUseCase: RecognizeEntitiesUseCase,
     private val syncEntitiesUseCase: SyncEntitiesUseCase,
     private val preferencesManager: PreferencesManager,
+    private val networkObserver: NetworkObserver,
 ) : BaseViewModel<EntityListUiState>(EntityListUiState()) {
+
+    init {
+        observeNetwork()
+    }
 
     fun onEvent(event: EntityListEvent) {
         when (event) {
@@ -44,6 +51,14 @@ class EntityListViewModel @Inject constructor(
             is EntityListEvent.Sync            -> syncEntities()
             is EntityListEvent.ClearResults    -> updateState { copy(matches = emptyList(), ocrText = "") }
             is EntityListEvent.LoadActiveNovel -> loadActiveNovel()
+        }
+    }
+
+    private fun observeNetwork() {
+        viewModelScope.launch {
+            networkObserver.observe().collect { isConnected ->
+                updateState { copy(isOffline = !isConnected) }
+            }
         }
     }
 
@@ -93,6 +108,11 @@ class EntityListViewModel @Inject constructor(
         val novelSlug = uiState.value.novelSlug
         if (novelSlug.isEmpty()) return
 
+        if (uiState.value.isOffline) {
+            updateState { copy(error = "Cannot sync while offline.") }
+            return
+        }
+
         viewModelScope.launch {
             updateState { copy(isLoading = true, error = null) }
 
@@ -103,7 +123,7 @@ class EntityListViewModel @Inject constructor(
                         error     = "Sync complete. ${result.data.newCount} new, ${result.data.updatedCount} updated.",
                     )
                 }
-                is Resource.Error   -> updateState {
+                is Resource.Error -> updateState {
                     copy(isLoading = false, error = result.message)
                 }
                 is Resource.Loading -> Unit

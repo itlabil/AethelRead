@@ -50,6 +50,7 @@ import com.sm.aethelread.presentation.components.EmptyState
 import com.sm.aethelread.presentation.components.LoadingIndicator
 import com.sm.aethelread.util.MatchType
 import com.sm.aethelread.util.RecognitionMatch
+import com.sm.aethelread.presentation.components.OfflineBanner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,35 +131,37 @@ fun EntityListScreen(
         },
     ) { paddingValues ->
 
-        when {
-            uiState.isScanning -> {
-                LoadingIndicator()
-            }
+        Column(modifier = Modifier.padding(paddingValues)) {
 
-            uiState.matches.isEmpty() -> {
-                EmptyState(
-                    title    = "No entities recognized",
-                    subtitle = "Tap Scan on the floating bubble to scan screen text",
-                    modifier = Modifier.padding(paddingValues),
-                )
-            }
+            OfflineBanner(isVisible = uiState.isOffline)
 
-            else -> {
-                LazyColumn(
-                    modifier            = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding      = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = uiState.matches,
-                        key   = { it.entity.slug },
-                    ) { match ->
-                        EntityMatchCard(
-                            match   = match,
-                            onClick = { onEntityClick(match.entity) },
-                        )
+            when {
+                uiState.isScanning -> {
+                    LoadingIndicator()
+                }
+
+                uiState.matches.isEmpty() -> {
+                    EmptyState(
+                        title    = "No entities recognized",
+                        subtitle = "Tap Scan on the floating bubble to scan screen text",
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier            = Modifier.fillMaxSize(),
+                        contentPadding      = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(
+                            items = uiState.matches,
+                            key   = { it.entity.slug },
+                        ) { match ->
+                            EntityMatchCard(
+                                match   = match,
+                                onClick = { onEntityClick(match.entity) },
+                            )
+                        }
                     }
                 }
             }
