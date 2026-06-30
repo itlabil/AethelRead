@@ -286,45 +286,49 @@ class BubbleService : Service() {
 
     private fun performScan() {
         serviceScope.launch {
-            android.util.Log.d("BubbleService", "performScan started")
             onScanStateChanged?.invoke(true)
 
             try {
                 val prefs = preferencesManager.appPreferences.first()
                 val novelSlug = prefs.selectedNovelSlug
-                android.util.Log.d("BubbleService", "novelSlug=$novelSlug")
 
                 if (novelSlug == null) {
-                    android.util.Log.d("BubbleService", "No novel selected, aborting")
                     onScanStateChanged?.invoke(false)
                     return@launch
                 }
 
-                android.util.Log.d("BubbleService", "Capturing screen...")
                 val bitmap = screenCaptureManager.captureScreen()
-                android.util.Log.d("BubbleService", "Bitmap captured: ${bitmap != null}")
 
                 if (bitmap == null) {
-                    android.util.Log.d("BubbleService", "Bitmap null, aborting")
                     onScanStateChanged?.invoke(false)
                     return@launch
                 }
 
-                android.util.Log.d("BubbleService", "Running OCR...")
                 val ocrResult = scanScreenUseCase(bitmap)
                 bitmap.recycle()
-                android.util.Log.d("BubbleService", "OCR result: success=${ocrResult.isSuccess}, text length=${ocrResult.fullText.length}")
 
                 if (ocrResult.isSuccess && ocrResult.fullText.isNotBlank()) {
-                    android.util.Log.d("BubbleService", "OCR text: ${ocrResult.fullText.take(100)}")
+                    android.util.Log.d("BubbleService", "OCR success, bringing app to foreground")
+                    bringAppToForeground()
+                    android.util.Log.d("BubbleService", "Invoking onOcrResult callback, callback is null=${onOcrResult == null}")
                     onOcrResult?.invoke(ocrResult.fullText)
+                    android.util.Log.d("BubbleService", "onOcrResult invoked")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("BubbleService", "performScan error", e)
+                e.printStackTrace()
             } finally {
                 onScanStateChanged?.invoke(false)
             }
         }
+    }
+
+    private fun bringAppToForeground() {
+        val intent = Intent(this, com.sm.aethelread.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        startActivity(intent)
     }
 
     private fun removeBubble() {

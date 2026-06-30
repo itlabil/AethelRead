@@ -64,7 +64,9 @@ fun EntityListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(novelSlug) {
-        viewModel.onEvent(EntityListEvent.SetNovel(novelSlug, novelName))
+        if (novelSlug.isNotEmpty()) {
+            viewModel.onEvent(EntityListEvent.SetNovel(novelSlug, novelName))
+        }
     }
 
     LaunchedEffect(ocrText) {

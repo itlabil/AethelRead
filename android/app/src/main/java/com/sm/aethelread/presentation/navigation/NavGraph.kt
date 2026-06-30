@@ -1,12 +1,16 @@
 package com.sm.aethelread.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.sm.aethelread.presentation.entitydetail.EntityDetailScreen
+import com.sm.aethelread.presentation.entitylist.EntityListEvent
 import com.sm.aethelread.presentation.entitylist.EntityListScreen
+import com.sm.aethelread.presentation.entitylist.EntityListViewModel
 import com.sm.aethelread.presentation.novelselection.NovelSelectionScreen
 import com.sm.aethelread.presentation.settings.SettingsScreen
 
@@ -29,7 +33,30 @@ sealed class Screen(val route: String) {
 @Composable
 fun AethelReadNavGraph(
     navController: NavHostController = rememberNavController(),
+    pendingOcrText: String? = null,
+    ocrTriggerCount: Int = 0,
 ) {
+    // Global ViewModel instance shared across EntityList navigation
+    val entityListViewModel: EntityListViewModel = hiltViewModel()
+
+    // Saat OCR masuk, pastikan kita pindah ke EntityList dan proses scan
+    LaunchedEffect(ocrTriggerCount) {
+        if (ocrTriggerCount > 0 && !pendingOcrText.isNullOrBlank()) {
+            entityListViewModel.onEvent(EntityListEvent.LoadActiveNovel)
+            entityListViewModel.onEvent(EntityListEvent.OcrResult(pendingOcrText))
+
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute != Screen.EntityList.route) {
+                val state = entityListViewModel.uiState.value
+                if (state.novelSlug.isNotEmpty()) {
+                    navController.navigate(
+                        Screen.EntityList.createRoute(state.novelSlug, state.novelName)
+                    )
+                }
+            }
+        }
+    }
+
     NavHost(
         navController    = navController,
         startDestination = Screen.NovelSelection.route,
@@ -61,6 +88,7 @@ fun AethelReadNavGraph(
                     )
                 },
                 onBack        = { navController.popBackStack() },
+                viewModel     = entityListViewModel,
             )
         }
 
