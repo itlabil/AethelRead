@@ -194,6 +194,38 @@ fun SettingsScreen(
                 }
             }
 
+            // Sync Section
+            SettingsSection(title = "Data Sync") {
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Text(
+                            text  = "Sync Now",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text  = "Automatically syncs every 6 hours",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(SettingsEvent.TriggerSync) },
+                        shape   = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(
+                            text  = "Sync",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
+
         }
     }
 }
