@@ -11,17 +11,16 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import android.view.WindowManager
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
 import com.sm.aethelread.MainActivity
-import com.sm.aethelread.R
 import com.sm.aethelread.data.local.preferences.PreferencesManager
+import com.sm.aethelread.domain.usecase.RecognizeEntitiesUseCase
+import com.sm.aethelread.domain.usecase.ScanScreenUseCase
+import com.sm.aethelread.util.ScreenCaptureManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,30 +34,41 @@ import kotlin.math.abs
 @AndroidEntryPoint
 class BubbleService : Service() {
 
-    @Inject
-    lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var scanScreenUseCase: ScanScreenUseCase
+    @Inject lateinit var recognizeEntitiesUseCase: RecognizeEntitiesUseCase
+    @Inject lateinit var screenCaptureManager: ScreenCaptureManager
 
-    private lateinit var windowManager: WindowManager
+    private lateinit var windowManager: android.view.WindowManager
     private var bubbleView: View? = null
-    private var panelView: View? = null
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
-        const val CHANNEL_ID    = "aethel_read_bubble"
+        const val CHANNEL_ID      = "aethel_read_bubble"
         const val NOTIFICATION_ID = 1001
 
-        const val ACTION_START  = "ACTION_START"
-        const val ACTION_STOP   = "ACTION_STOP"
-        const val ACTION_SCAN   = "ACTION_SCAN"
+        const val ACTION_START    = "ACTION_START"
+        const val ACTION_STOP     = "ACTION_STOP"
+
+        const val EXTRA_RESULT_CODE = "EXTRA_RESULT_CODE"
+        const val EXTRA_RESULT_DATA = "EXTRA_RESULT_DATA"
 
         var isRunning = mutableStateOf(false)
-        var onScanRequested: (() -> Unit)? = null
 
-        fun start(context: Context) {
+        // Callback untuk kirim OCR result ke UI
+        var onOcrResult: ((String) -> Unit)? = null
+        var onScanStateChanged: ((Boolean) -> Unit)? = null
+
+        fun start(context: Context, resultCode: Int, data: Intent) {
+            android.util.Log.d("BubbleService", "start() called with resultCode=$resultCode")
             val intent = Intent(context, BubbleService::class.java).apply {
                 action = ACTION_START
+                putExtra(EXTRA_RESULT_CODE, resultCode)
+                putExtra(EXTRA_RESULT_DATA, data)
             }
+            android.util.Log.d("BubbleService", "Intent extras resultCode=${intent.getIntExtra(EXTRA_RESULT_CODE, -999)}")
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -67,10 +77,11 @@ class BubbleService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, BubbleService::class.java).apply {
-                action = ACTION_STOP
-            }
-            context.startService(intent)
+            context.startService(
+                Intent(context, BubbleService::class.java).apply {
+                    action = ACTION_STOP
+                }
+            )
         }
     }
 
@@ -78,19 +89,41 @@ class BubbleService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        windowManager = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.d("BubbleService", "onStartCommand action=${intent?.action}")
         when (intent?.action) {
             ACTION_START -> {
-                startForeground(NOTIFICATION_ID, buildNotification())
+                val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Int.MIN_VALUE)
+                val data       = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+                android.util.Log.d("BubbleService", "resultCode=$resultCode, data=$data")
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildNotification(),
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION,
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                }
+
+                if (resultCode != Int.MIN_VALUE && data != null) {
+                    screenCaptureManager.setupProjection(resultCode, data)
+                } else {
+                    android.util.Log.e("BubbleService", "Missing resultCode or data for projection!")
+                }
+
                 showBubble()
                 isRunning.value = true
             }
+
             ACTION_STOP -> {
                 removeBubble()
+                screenCaptureManager.release()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 isRunning.value = false
@@ -102,6 +135,7 @@ class BubbleService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         removeBubble()
+        screenCaptureManager.release()
         serviceScope.cancel()
         isRunning.value = false
     }
@@ -116,17 +150,20 @@ class BubbleService : Service() {
         if (bubbleView != null) return
 
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
             @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
+            android.view.WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+        val size   = (64 * resources.displayMetrics.density).toInt()
+
+        // ← UPDATE BAGIAN INI
+        val params = android.view.WindowManager.LayoutParams(
+            size, size,
             layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -134,70 +171,70 @@ class BubbleService : Service() {
             y = 200
         }
 
-        // Restore last position
+        // Restore saved position
         serviceScope.launch {
             val prefs = preferencesManager.appPreferences.first()
-            params.x = prefs.bubbleX.toInt()
-            params.y = prefs.bubbleY.toInt()
-            windowManager.updateViewLayout(bubbleView, params)
+            params.x  = prefs.bubbleX.toInt()
+            params.y  = prefs.bubbleY.toInt()
+            if (bubbleView != null) {
+                windowManager.updateViewLayout(bubbleView, params)
+            }
         }
 
         bubbleView = createBubbleView(params)
         windowManager.addView(bubbleView, params)
     }
 
-    private fun createBubbleView(params: WindowManager.LayoutParams): View {
-        val view = View(this).apply {
-            // Draw bubble programmatically
-            setBackgroundResource(android.R.drawable.btn_default)
-        }
+    private fun createBubbleView(params: android.view.WindowManager.LayoutParams): View {
+        val size = (64 * resources.displayMetrics.density).toInt()
 
-        // Buat bubble view menggunakan canvas
-        val bubbleLayout = android.widget.FrameLayout(this).apply {
-            val size = (64 * resources.displayMetrics.density).toInt()
+        return android.widget.FrameLayout(this).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(size, size)
 
             // Circle background
-            val circle = View(context).apply {
-                layoutParams = android.widget.FrameLayout.LayoutParams(size, size)
-                background = androidx.core.content.ContextCompat.getDrawable(
-                    context,
-                    android.R.drawable.presence_online,
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(android.graphics.Color.parseColor("#9333EA"))
+                setStroke(
+                    (2 * resources.displayMetrics.density).toInt(),
+                    android.graphics.Color.parseColor("#7E22CE"),
                 )
             }
 
-            // Scan button text
-            val scanText = TextView(context).apply {
-                text    = "A"
-                textSize = 20f
-                gravity = Gravity.CENTER
-                setTextColor(android.graphics.Color.WHITE)
-                layoutParams = android.widget.FrameLayout.LayoutParams(
-                    size, size,
-                    Gravity.CENTER,
-                )
-            }
+            elevation = 8f * resources.displayMetrics.density
 
-            addView(circle)
-            addView(scanText)
+            // "A" label
+            addView(
+                TextView(context).apply {
+                    text     = "A"
+                    textSize = 22f
+                    gravity  = Gravity.CENTER
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setTextColor(android.graphics.Color.WHITE)
+                    layoutParams = android.widget.FrameLayout.LayoutParams(
+                        size, size, Gravity.CENTER,
+                    )
+                }
+            )
+
+            setupDragAndClick(this, params)
         }
-
-        setupDragAndClick(bubbleLayout, params)
-        return bubbleLayout
     }
 
     private fun setupDragAndClick(
         view: View,
-        params: WindowManager.LayoutParams,
+        params: android.view.WindowManager.LayoutParams,
     ) {
-        var initialX = 0
-        var initialY = 0
+        var initialX      = 0
+        var initialY      = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
-        var isDragging = false
+        var isDragging    = false
 
         view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    android.util.Log.d("BubbleService", "ACTION_DOWN")
                     initialX      = params.x
                     initialY      = params.y
                     initialTouchX = event.rawX
@@ -207,9 +244,9 @@ class BubbleService : Service() {
                 }
 
                 MotionEvent.ACTION_MOVE -> {
+                    android.util.Log.d("BubbleService", "ACTION_MOVE")
                     val dx = event.rawX - initialTouchX
                     val dy = event.rawY - initialTouchY
-
                     if (abs(dx) > 10 || abs(dy) > 10) {
                         isDragging = true
                         params.x   = initialX + dx.toInt()
@@ -220,11 +257,11 @@ class BubbleService : Service() {
                 }
 
                 MotionEvent.ACTION_UP -> {
+                    android.util.Log.d("BubbleService", "ACTION_UP isDragging=$isDragging")
                     if (!isDragging) {
-                        // Tap = Scan
-                        onScanRequested?.invoke()
+                        android.util.Log.d("BubbleService", "Calling performScan()")
+                        performScan()
                     } else {
-                        // Save position
                         serviceScope.launch {
                             preferencesManager.saveBubblePosition(
                                 params.x.toFloat(),
@@ -232,6 +269,7 @@ class BubbleService : Service() {
                             )
                         }
                     }
+                    isDragging = false
                     true
                 }
 
@@ -240,14 +278,59 @@ class BubbleService : Service() {
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | OCR Pipeline
+    |--------------------------------------------------------------------------
+    */
+
+    private fun performScan() {
+        serviceScope.launch {
+            android.util.Log.d("BubbleService", "performScan started")
+            onScanStateChanged?.invoke(true)
+
+            try {
+                val prefs = preferencesManager.appPreferences.first()
+                val novelSlug = prefs.selectedNovelSlug
+                android.util.Log.d("BubbleService", "novelSlug=$novelSlug")
+
+                if (novelSlug == null) {
+                    android.util.Log.d("BubbleService", "No novel selected, aborting")
+                    onScanStateChanged?.invoke(false)
+                    return@launch
+                }
+
+                android.util.Log.d("BubbleService", "Capturing screen...")
+                val bitmap = screenCaptureManager.captureScreen()
+                android.util.Log.d("BubbleService", "Bitmap captured: ${bitmap != null}")
+
+                if (bitmap == null) {
+                    android.util.Log.d("BubbleService", "Bitmap null, aborting")
+                    onScanStateChanged?.invoke(false)
+                    return@launch
+                }
+
+                android.util.Log.d("BubbleService", "Running OCR...")
+                val ocrResult = scanScreenUseCase(bitmap)
+                bitmap.recycle()
+                android.util.Log.d("BubbleService", "OCR result: success=${ocrResult.isSuccess}, text length=${ocrResult.fullText.length}")
+
+                if (ocrResult.isSuccess && ocrResult.fullText.isNotBlank()) {
+                    android.util.Log.d("BubbleService", "OCR text: ${ocrResult.fullText.take(100)}")
+                    onOcrResult?.invoke(ocrResult.fullText)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("BubbleService", "performScan error", e)
+            } finally {
+                onScanStateChanged?.invoke(false)
+            }
+        }
+    }
+
     private fun removeBubble() {
         bubbleView?.let {
             windowManager.removeView(it)
             bubbleView = null
-        }
-        panelView?.let {
-            windowManager.removeView(it)
-            panelView = null
         }
     }
 
@@ -267,22 +350,21 @@ class BubbleService : Service() {
                 description = "Aethel Read floating bubble service"
                 setShowBadge(false)
             }
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+            getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
         }
     }
 
     private fun buildNotification(): Notification {
         val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
+            this, 0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Aethel Read")
-            .setContentText("Reading companion is active")
+            .setContentText("Reading companion is active — tap bubble to scan")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

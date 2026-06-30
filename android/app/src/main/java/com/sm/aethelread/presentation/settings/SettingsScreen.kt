@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import com.sm.aethelread.service.BubbleService
 import com.sm.aethelread.util.BubblePermissionHelper
+import com.sm.aethelread.service.ScreenCaptureActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,11 +178,11 @@ fun SettingsScreen(
                     }
 
                     Switch(
-                        checked         = BubbleService.isRunning.value,
+                        checked         = isBubbleRunning,
                         onCheckedChange = { enabled ->
                             if (enabled) {
                                 if (BubblePermissionHelper.hasOverlayPermission(context)) {
-                                    BubbleService.start(context)
+                                    ScreenCaptureActivity.start(context)
                                 } else {
                                     BubblePermissionHelper.requestOverlayPermission(context)
                                 }
