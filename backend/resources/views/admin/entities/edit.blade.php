@@ -5,33 +5,46 @@
 @section('subheader', 'Update entity information')
 
 @section('content')
+
+{{-- Back --}}
+<div class="mb-4">
+    
+    <a href="{{ route('admin.novels.entities.index', $novelModel->id) }}"
+        class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition"
+    >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to {{ $novelModel->name }}
+    </a>
+</div>
+
 <div class="max-w-3xl">
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
 
-        <form method="POST" action="{{ route('admin.entities.update', $entity->id) }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('admin.novels.entities.update', [$novelModel->id, $entity->id]) }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
-            {{-- Novel --}}
-            <div class="mb-5">
-                <label for="novel_id" class="block text-sm font-medium text-gray-700 mb-1">
-                    Novel <span class="text-red-500">*</span>
-                </label>
-                <select
-                    id="novel_id"
-                    name="novel_id"
-                    class="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-primary-500
-                        {{ $errors->has('novel_id') ? 'border-red-300 bg-red-50' : 'border-gray-300' }}"
-                >
-                    @foreach ($novels as $novel)
-                        <option value="{{ $novel->id }}" {{ old('novel_id', $entity->novel_id) === $novel->id ? 'selected' : '' }}>
-                            {{ $novel->name }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('novel_id')
-                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                @enderror
+            {{-- Novel (hidden) --}}
+            <input type="hidden" name="novel_id" value="{{ $novelModel->id }}">
+
+            {{-- Novel Info (readonly display) --}}
+            <div class="mb-5 p-4 bg-gray-50 rounded-xl flex items-center gap-3">
+                <div class="w-8 h-11 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center shrink-0">
+                    @if ($novelModel->cover_url)
+                        <img src="{{ $novelModel->cover_url }}" alt="{{ $novelModel->name }}" class="w-full h-full object-cover"/>
+                    @else
+                        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    @endif
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">{{ $novelModel->name }}</p>
+                    <p class="text-xs text-gray-400">{{ ucfirst($novelModel->type) }}</p>
+                </div>
             </div>
 
             {{-- Type --}}
@@ -135,16 +148,15 @@
 
             {{-- Image --}}
             <div class="mb-5" x-data="imageUpload()">
-
                 <label class="block text-sm font-medium text-gray-700 mb-2">Image</label>
 
                 {{-- Current Image --}}
                 @if ($entity->image)
                     <div class="mb-4 flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                         <img
-                            src="{{ $entity->image->thumbnail_url }}"
+                            src="{{ Storage::url($entity->image->thumbnail_path) }}"
                             alt="{{ $entity->name }}"
-                            class="w-20 h-20 rounded-lg object-cover border border-gray-200"
+                            class="w-16 h-16 rounded-lg object-cover border border-gray-200"
                         />
                         <div class="flex-1">
                             <p class="text-sm font-medium text-gray-700">Current image</p>
@@ -152,11 +164,16 @@
                                 {{ number_format($entity->image->size / 1024, 1) }} KB
                                 · {{ $entity->image->width }}×{{ $entity->image->height }}px
                             </p>
-                            <p class="text-xs text-gray-400 font-mono mt-0.5">
-                                {{ substr($entity->image->hash, 0, 16) }}...
-                            </p>
                         </div>
-                        {{-- Delete Image Button --}}
+                        <form
+                            method="POST"
+                            action="{{ route('admin.novels.entities.image.destroy', [$novelModel->id, $entity->id]) }}"
+                            id="form-delete-image"
+                            class="hidden"
+                        >
+                            @csrf
+                            @method('DELETE')
+                        </form>
                         <button
                             type="button"
                             onclick="confirmDelete(document.getElementById('form-delete-image'))"
@@ -167,7 +184,7 @@
                     </div>
                 @endif
 
-                {{-- Upload New Image --}}
+                {{-- Upload New --}}
                 <div
                     class="relative border-2 border-dashed rounded-xl p-6 text-center transition"
                     :class="isDragging ? 'border-primary-400 bg-primary-50' : 'border-gray-300 hover:border-primary-300'"
@@ -175,16 +192,10 @@
                     @dragleave.prevent="isDragging = false"
                     @drop.prevent="handleDrop($event)"
                 >
-                    {{-- Preview --}}
                     <div x-show="preview" class="mb-4">
-                        <img
-                            :src="preview"
-                            class="w-24 h-24 rounded-lg object-cover mx-auto border border-gray-200"
-                        />
+                        <img :src="preview" class="w-24 h-24 rounded-lg object-cover mx-auto border border-gray-200"/>
                         <p class="text-xs text-gray-500 mt-2" x-text="fileName"></p>
                     </div>
-
-                    {{-- Placeholder --}}
                     <div x-show="!preview">
                         <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -196,7 +207,6 @@
                         </p>
                         <p class="text-xs text-gray-400 mt-1">JPEG, PNG, WEBP · max 2MB</p>
                     </div>
-
                     <input
                         type="file"
                         id="image"
@@ -206,21 +216,12 @@
                         @change="handleFile($event)"
                     />
                 </div>
-
-                {{-- Clear preview --}}
-                <button
-                    type="button"
-                    x-show="preview"
-                    @click="clearPreview()"
-                    class="mt-2 text-xs text-gray-400 hover:text-red-500 transition"
-                >
+                <button type="button" x-show="preview" @click="clearPreview()" class="mt-2 text-xs text-gray-400 hover:text-red-500 transition">
                     Clear selection
                 </button>
-
                 @error('image')
                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                 @enderror
-
             </div>
 
             {{-- Is Active --}}
@@ -246,7 +247,7 @@
                     Update Entity
                 </button>
                 
-                <a href="{{ route('admin.entities.index') }}"
+                <a href="{{ route('admin.novels.entities.index', $novelModel->id) }}"
                     class="px-6 py-2.5 border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition"
                 >
                     Cancel
@@ -256,17 +257,4 @@
         </form>
     </div>
 </div>
-
-{{-- Form Delete Image — di luar form utama --}}
-@if ($entity->image)
-<form
-    method="POST"
-    action="{{ route('admin.entities.image.destroy', $entity->id) }}"
-    id="form-delete-image"
-    class="hidden"
->
-    @csrf
-    @method('DELETE')
-</form>
-@endif
 @endsection

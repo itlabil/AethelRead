@@ -8,7 +8,7 @@
 <div class="max-w-2xl">
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
 
-        <form method="POST" action="{{ route('admin.novels.store') }}">
+        <form method="POST" action="{{ route('admin.novels.store') }}" enctype="multipart/form-data">
             @csrf
 
             {{-- Name --}}
@@ -52,6 +52,48 @@
                 @error('type')
                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                 @enderror
+            </div>
+
+            {{-- Cover --}}
+            <div class="mb-5" x-data="imageUpload()">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Cover Image
+                    <span class="text-gray-400 font-normal">(max 2MB, jpeg/jpg/png/webp, recommended 300x420px)</span>
+                </label>
+
+                <div
+                    class="relative border-2 border-dashed rounded-xl p-6 text-center transition"
+                    :class="isDragging ? 'border-primary-400 bg-primary-50' : 'border-gray-300 hover:border-primary-300'"
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleDrop($event)"
+                >
+                    <div x-show="preview" class="mb-4">
+                        <img :src="preview" class="w-20 h-28 rounded-lg object-cover mx-auto border border-gray-200"/>
+                        <p class="text-xs text-gray-500 mt-2" x-text="fileName"></p>
+                    </div>
+                    <div x-show="!preview">
+                        <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm text-gray-500">
+                            Drag & drop or
+                            <label for="cover" class="text-primary-600 hover:text-primary-700 cursor-pointer font-medium">browse</label>
+                        </p>
+                    </div>
+                    <input
+                        type="file"
+                        id="cover"
+                        name="cover"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        @change="handleFile($event)"
+                    />
+                </div>
+                <button type="button" x-show="preview" @click="clearPreview()" class="mt-2 text-xs text-gray-400 hover:text-red-500 transition">
+                    Clear selection
+                </button>
             </div>
 
             {{-- Is Active --}}

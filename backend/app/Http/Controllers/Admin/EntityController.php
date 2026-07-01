@@ -39,20 +39,17 @@ class EntityController extends AdminController
 
     public function create(): View
     {
-        $novels = $this->novelService->getAllActive();
+        $novelId    = request()->route('novel');
+        $novelModel = $novelId ? $this->novelService->findByIdOrFail($novelId) : null;
 
-        return view('admin.entities.create', compact('novels'));
+        return view('admin.entities.create', compact('novelModel'));
     }
 
     public function store(StoreEntityRequest $request): RedirectResponse
     {
         $data = $request->validated();
-
-        // Aliases & keywords sudah array dari dynamic list
         $data['aliases']  = $request->input('aliases', []);
         $data['keywords'] = $request->input('keywords', []);
-
-        // Parse descriptions
         $data['descriptions'] = array_filter([
             'en' => $request->input('description_en'),
             'id' => $request->input('description_id'),
@@ -64,35 +61,33 @@ class EntityController extends AdminController
             $this->imageService->upload($entity->id, $request->file('image'));
         }
 
+        // Redirect back ke novel context jika ada
+        $novelId = $request->route('novel');
+        if ($novelId) {
+            return redirect()
+                ->route('admin.novels.entities.index', $novelId)
+                ->with('success', 'Entity created successfully.');
+        }
+
         return redirect()
-            ->route('admin.entities.index')
+            ->route('admin.novels.index')
             ->with('success', 'Entity created successfully.');
     }
 
-    public function show(string $id): View
+    public function edit(string $novel, string $id): View
     {
-        $entity = $this->entityService->findById($id);
-        $entity->load(['novel', 'aliases', 'keywords', 'descriptions', 'image']);
-
-        return view('admin.entities.show', compact('entity'));
-    }
-
-    public function edit(string $id): View
-    {
-        $entity = $this->entityService->findByIdOrFail($id);
+        $novelModel = $this->novelService->findByIdOrFail($novel);
+        $entity     = $this->entityService->findByIdOrFail($id);
         $entity->load(['aliases', 'keywords', 'descriptions', 'image']);
-        $novels = $this->novelService->getAllActive();
 
-        return view('admin.entities.edit', compact('entity', 'novels'));
+        return view('admin.entities.edit', compact('entity', 'novelModel'));
     }
 
-    public function update(UpdateEntityRequest $request, string $id): RedirectResponse
+    public function update(UpdateEntityRequest $request, string $novel, string $id): RedirectResponse
     {
         $data = $request->validated();
-
         $data['aliases']  = $request->input('aliases', []);
         $data['keywords'] = $request->input('keywords', []);
-
         $data['descriptions'] = array_filter([
             'en' => $request->input('description_en'),
             'id' => $request->input('description_id'),
@@ -105,28 +100,37 @@ class EntityController extends AdminController
         }
 
         return redirect()
-            ->route('admin.entities.index')
+            ->route('admin.novels.entities.index', $novel)
             ->with('success', 'Entity updated successfully.');
     }
 
-    public function destroy(string $id): RedirectResponse
+    public function show(string $novel, string $id): View
+    {
+        $entity = $this->entityService->findByIdOrFail($id);
+        $entity->load(['novel', 'aliases', 'keywords', 'descriptions', 'image']);
+        $novelModel = $this->novelService->findByIdOrFail($novel);
+
+        return view('admin.entities.show', compact('entity', 'novelModel'));
+    }
+
+    public function destroy(string $novel, string $id): RedirectResponse
     {
         $this->imageService->delete($id);
         $this->entityService->delete($id);
 
         return redirect()
-            ->route('admin.entities.index')
+            ->route('admin.novels.entities.index', $novel)
             ->with('success', 'Entity deleted successfully.');
     }
 
-    public function toggle(string $id): RedirectResponse
+    public function toggle(string $novel, string $id): RedirectResponse
     {
         $this->entityService->toggleActive($id);
 
         return back()->with('success', 'Entity status updated.');
     }
 
-    public function destroyImage(string $id): RedirectResponse
+    public function destroyImage(string $novel, string $id): RedirectResponse
     {
         $this->imageService->delete($id);
 

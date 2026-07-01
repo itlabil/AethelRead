@@ -2,9 +2,12 @@ package com.sm.aethelread.presentation.entitylist
 
 import androidx.lifecycle.viewModelScope
 import com.sm.aethelread.data.local.preferences.PreferencesManager
+import com.sm.aethelread.domain.model.Entity
+import com.sm.aethelread.domain.usecase.GetEntitiesUseCase
 import com.sm.aethelread.domain.usecase.RecognizeEntitiesUseCase
 import com.sm.aethelread.domain.usecase.SyncEntitiesUseCase
 import com.sm.aethelread.presentation.base.BaseViewModel
+import com.sm.aethelread.util.MatchType
 import com.sm.aethelread.util.NetworkObserver
 import com.sm.aethelread.util.RecognitionMatch
 import com.sm.aethelread.util.Resource
@@ -22,6 +25,7 @@ data class EntityListUiState(
     val novelSlug: String = "",
     val novelName: String = "",
     val isOffline: Boolean = false,
+    val isShowingScanResult: Boolean = false,
 )
 
 sealed class EntityListEvent {
@@ -30,11 +34,13 @@ sealed class EntityListEvent {
     data object Sync : EntityListEvent()
     data object ClearResults : EntityListEvent()
     data object LoadActiveNovel : EntityListEvent()
+    data object ShowAllEntities : EntityListEvent()
 }
 
 @HiltViewModel
 class EntityListViewModel @Inject constructor(
     private val recognizeEntitiesUseCase: RecognizeEntitiesUseCase,
+    private val getEntitiesUseCase: GetEntitiesUseCase,
     private val syncEntitiesUseCase: SyncEntitiesUseCase,
     private val preferencesManager: PreferencesManager,
     private val networkObserver: NetworkObserver,
@@ -49,8 +55,9 @@ class EntityListViewModel @Inject constructor(
             is EntityListEvent.SetNovel        -> setNovel(event.slug, event.name)
             is EntityListEvent.OcrResult       -> processOcrResult(event.text)
             is EntityListEvent.Sync            -> syncEntities()
-            is EntityListEvent.ClearResults    -> updateState { copy(matches = emptyList(), ocrText = "") }
+            is EntityListEvent.ClearResults    -> showAllEntities()
             is EntityListEvent.LoadActiveNovel -> loadActiveNovel()
+            is EntityListEvent.ShowAllEntities -> showAllEntities()
         }
     }
 
@@ -72,8 +79,61 @@ class EntityListViewModel @Inject constructor(
     }
 
     private fun setNovel(slug: String, name: String) {
-        if (uiState.value.novelSlug != slug) {
-            updateState { copy(novelSlug = slug, novelName = name) }
+        val isNewNovel = uiState.value.novelSlug != slug
+        updateState { copy(novelSlug = slug, novelName = name) }
+
+        if (isNewNovel) {
+            loadAllEntities(slug)
+        }
+    }
+
+    /**
+     * Load and display ALL entities for the novel (browse mode).
+     */
+    private fun loadAllEntities(novelSlug: String) {
+        viewModelScope.launch {
+            updateState { copy(isLoading = true, error = null, isShowingScanResult = false) }
+
+            getEntitiesUseCase(novelSlug).collect { resource ->
+                when (resource) {
+                    is Resource.Loading -> updateState { copy(isLoading = true) }
+                    is Resource.Success -> {
+                        val matches = resource.data.map { entity ->
+                            RecognitionMatch(
+                                entity      = entity,
+                                matchedText = entity.name,
+                                matchType   = MatchType.MAIN_NAME,
+                                confidence  = 1.0f,
+                            )
+                        }.sortedBy { it.entity.name }
+
+                        updateState {
+                            copy(
+                                matches    = matches,
+                                isLoading  = false,
+                                error      = if (matches.isEmpty()) "No entities found for this novel." else null,
+                                isShowingScanResult = false,
+                            )
+                        }
+                    }
+                    is Resource.Error -> updateState {
+                        copy(
+                            isLoading = false,
+                            error     = if (matches.isEmpty()) resource.message else null,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Switch back to browse mode (show all entities).
+     */
+    private fun showAllEntities() {
+        val novelSlug = uiState.value.novelSlug
+        if (novelSlug.isNotEmpty()) {
+            loadAllEntities(novelSlug)
         }
     }
 
@@ -98,7 +158,8 @@ class EntityListViewModel @Inject constructor(
                 copy(
                     matches    = matches,
                     isScanning = false,
-                    error      = if (matches.isEmpty()) "No entities recognized." else null,
+                    isShowingScanResult = true,
+                    error      = if (matches.isEmpty()) "No entities recognized from scan." else null,
                 )
             }
         }
@@ -117,11 +178,9 @@ class EntityListViewModel @Inject constructor(
             updateState { copy(isLoading = true, error = null) }
 
             when (val result = syncEntitiesUseCase(novelSlug)) {
-                is Resource.Success -> updateState {
-                    copy(
-                        isLoading = false,
-                        error     = "Sync complete. ${result.data.newCount} new, ${result.data.updatedCount} updated.",
-                    )
+                is Resource.Success -> {
+                    // Refresh list setelah sync
+                    loadAllEntities(novelSlug)
                 }
                 is Resource.Error -> updateState {
                     copy(isLoading = false, error = result.message)

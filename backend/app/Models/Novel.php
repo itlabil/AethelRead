@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
@@ -17,12 +18,16 @@ class Novel extends BaseModel
         'type',
         'hash',
         'is_active',
+        'cover_path',
+        'cover_thumbnail_path',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'cover_path' => 'string',
+            'cover_thumbnail_path' => 'string',
         ];
     }
 
@@ -75,5 +80,12 @@ class Novel extends BaseModel
     public function scopeOfType($query, string $type)
     {
         return $query->where('type', $type);
+    }
+
+    public function getCoverUrlAttribute(): ?string
+    {
+        return $this->cover_thumbnail_path
+            ? Storage::url($this->cover_thumbnail_path)
+            : null;
     }
 }

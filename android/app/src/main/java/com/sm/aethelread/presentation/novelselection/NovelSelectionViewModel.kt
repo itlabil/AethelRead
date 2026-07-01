@@ -2,6 +2,7 @@ package com.sm.aethelread.presentation.novelselection
 
 import androidx.lifecycle.viewModelScope
 import com.sm.aethelread.domain.model.Novel
+import com.sm.aethelread.domain.repository.NovelRepository
 import com.sm.aethelread.domain.usecase.GetNovelsUseCase
 import com.sm.aethelread.domain.usecase.SaveSelectedNovelUseCase
 import com.sm.aethelread.presentation.base.BaseViewModel
@@ -28,6 +29,7 @@ sealed class NovelSelectionEvent {
 class NovelSelectionViewModel @Inject constructor(
     private val getNovelsUseCase: GetNovelsUseCase,
     private val saveSelectedNovelUseCase: SaveSelectedNovelUseCase,
+    private val novelRepository: NovelRepository,
     private val networkObserver: NetworkObserver,
 ) : BaseViewModel<NovelSelectionUiState>(NovelSelectionUiState()) {
 
@@ -39,7 +41,7 @@ class NovelSelectionViewModel @Inject constructor(
     fun onEvent(event: NovelSelectionEvent) {
         when (event) {
             is NovelSelectionEvent.SelectNovel -> selectNovel(event.novel)
-            is NovelSelectionEvent.Refresh      -> loadNovels()
+            is NovelSelectionEvent.Refresh      -> forceRefresh()
         }
     }
 
@@ -66,11 +68,37 @@ class NovelSelectionViewModel @Inject constructor(
                     is Resource.Error -> updateState {
                         copy(
                             isLoading = false,
-                            // Hanya tampilkan error jika tidak ada data cache sama sekali
                             error = if (novels.isEmpty()) resource.message else null,
                         )
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Force refresh from API, bypassing local cache.
+     * Used by pull-to-refresh.
+     */
+    private fun forceRefresh() {
+        viewModelScope.launch {
+            updateState { copy(isLoading = true, error = null) }
+
+            when (val result = novelRepository.refreshNovels()) {
+                is Resource.Success -> updateState {
+                    copy(
+                        novels    = result.data,
+                        isLoading = false,
+                        error     = null,
+                    )
+                }
+                is Resource.Error -> updateState {
+                    copy(
+                        isLoading = false,
+                        error = if (novels.isEmpty()) result.message else "Failed to refresh: ${result.message}",
+                    )
+                }
+                is Resource.Loading -> Unit
             }
         }
     }

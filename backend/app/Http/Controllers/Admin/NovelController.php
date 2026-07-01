@@ -35,7 +35,16 @@ class NovelController extends AdminController
 
     public function store(StoreNovelRequest $request): RedirectResponse
     {
-        $this->novelService->create($request->validated());
+        // Pisahkan field cover dari data novel
+        $data = collect($request->validated())
+            ->except(['cover'])
+            ->toArray();
+
+        $novel = $this->novelService->create($data);
+
+        if ($request->hasFile('cover')) {
+            $this->novelService->uploadCover($novel->id, $request->file('cover'));
+        }
 
         return redirect()
             ->route('admin.novels.index')
@@ -51,7 +60,16 @@ class NovelController extends AdminController
 
     public function update(UpdateNovelRequest $request, string $id): RedirectResponse
     {
-        $this->novelService->update($id, $request->validated());
+        // Pisahkan field cover dari data novel
+        $data = collect($request->validated())
+            ->except(['cover'])
+            ->toArray();
+
+        $this->novelService->update($id, $data);
+
+        if ($request->hasFile('cover')) {
+            $this->novelService->uploadCover($id, $request->file('cover'));
+        }
 
         return redirect()
             ->route('admin.novels.index')
@@ -60,6 +78,7 @@ class NovelController extends AdminController
 
     public function destroy(string $id): RedirectResponse
     {
+        $this->novelService->deleteCover($id);
         $this->novelService->delete($id);
 
         return redirect()
@@ -72,5 +91,28 @@ class NovelController extends AdminController
         $this->novelService->toggleActive($id);
 
         return back()->with('success', 'Novel status updated.');
+    }
+
+    public function destroyCover(string $id): RedirectResponse
+    {
+        $this->novelService->deleteCover($id);
+
+        return back()->with('success', 'Cover deleted successfully.');
+    }
+
+    // Entity management via Novel
+    public function entities(Request $request, string $id): View
+    {
+        $novel   = $this->novelService->findByIdOrFail($id);
+        $filters = $this->getFilterParams($request);
+        $filters['novel_id'] = $novel->id;
+
+        $entityService = app(\App\Services\EntityService::class);
+        $entities      = $entityService->getFilteredPaginated($filters);
+
+        // Eager load image untuk menghindari lazy loading violation
+        $entities->load('image');
+
+        return view('admin.novels.entities', compact('novel', 'entities', 'filters'));
     }
 }

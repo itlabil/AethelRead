@@ -29,6 +29,9 @@ class EntityController extends ApiController
         $novel    = $this->novelService->findBySlugOrFail($novelSlug);
         $entities = $this->entityService->getAllActiveByNovel($novel->id);
 
+        // Load relations agar image, aliases, dll ikut ter-include
+        $entities->load(['novel', 'aliases', 'keywords', 'descriptions', 'image']);
+
         return $this->successResponse(
             EntityResource::collection($entities),
             'Entities retrieved successfully'

@@ -22,6 +22,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('{novel}', [\App\Http\Controllers\Admin\NovelController::class, 'update'])->name('update');
             Route::delete('{novel}', [\App\Http\Controllers\Admin\NovelController::class, 'destroy'])->name('destroy');
             Route::patch('{novel}/toggle', [\App\Http\Controllers\Admin\NovelController::class, 'toggle'])->name('toggle');
+
+            // Entity via Novel
+            Route::get('{novel}/entities', [\App\Http\Controllers\Admin\NovelController::class, 'entities'])->name('entities.index');
+            Route::get('{novel}/entities/create', [\App\Http\Controllers\Admin\EntityController::class, 'create'])->name('entities.create');
+            Route::post('{novel}/entities', [\App\Http\Controllers\Admin\EntityController::class, 'store'])->name('entities.store');
+            Route::get('{novel}/entities/{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'show'])->name('entities.show');
+            Route::get('{novel}/entities/{entity}/edit', [\App\Http\Controllers\Admin\EntityController::class, 'edit'])->name('entities.edit');
+            Route::put('{novel}/entities/{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'update'])->name('entities.update');
+            Route::delete('{novel}/entities/{entity}', [\App\Http\Controllers\Admin\EntityController::class, 'destroy'])->name('entities.destroy');
+            Route::patch('{novel}/entities/{entity}/toggle', [\App\Http\Controllers\Admin\EntityController::class, 'toggle'])->name('entities.toggle');
+            Route::delete('{novel}/entities/{entity}/image', [\App\Http\Controllers\Admin\EntityController::class, 'destroyImage'])->name('entities.image.destroy');
         });
 
         // Entities

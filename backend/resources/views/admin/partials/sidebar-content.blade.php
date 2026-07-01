@@ -68,7 +68,7 @@
     </div>
 
     {{-- Entities --}}
-    <div class="px-3 mb-1">
+    {{-- <div class="px-3 mb-1">
         
         <a href="{{ route('admin.entities.index') }}"
             @if($mobile) @click="sidebarOpen = false" @endif
@@ -86,7 +86,7 @@
                 @if(!$mobile) x-show="!sidebarCollapsed" x-transition @endif
             >Entities</span>
         </a>
-    </div>
+    </div> --}}
 
     {{-- Section Label --}}
     <div

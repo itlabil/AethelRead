@@ -7,6 +7,10 @@ use App\Repositories\Contracts\NovelRepositoryInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class NovelService extends BaseService
 {
@@ -168,5 +172,59 @@ class NovelService extends BaseService
         $query->orderBy($filters['sort'], $filters['direction']);
 
         return $query->paginate($filters['per_page'])->withQueryString();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Image Prosessing Operations
+    |--------------------------------------------------------------------------
+    */
+
+    public function uploadCover(string $id, UploadedFile $file): Novel
+    {
+        $novel = $this->novelRepository->findByIdOrFail($id);
+
+        // Delete existing cover
+        if ($novel->cover_path) {
+            Storage::disk('public')->delete($novel->cover_path);
+            Storage::disk('public')->delete($novel->cover_thumbnail_path);
+        }
+
+        // Store original
+        $originalPath = $file->store('novels/covers/original', 'public');
+
+        // Process thumbnail
+        $filename  = pathinfo($file->hashName(), PATHINFO_FILENAME) . '.webp';
+        $thumbPath = 'novels/covers/thumbnails/' . $filename;
+        $fullPath  = Storage::disk('public')->path($thumbPath);
+
+        Storage::disk('public')->makeDirectory('novels/covers/thumbnails');
+
+        $manager = new ImageManager(new Driver());
+        $image   = $manager->read($file->getPathname())
+            ->cover(300, 420)
+            ->toWebp(quality: 85);
+
+        file_put_contents($fullPath, $image);
+
+        return $this->novelRepository->update($id, [
+            'cover_path'           => $originalPath,
+            'cover_thumbnail_path' => $thumbPath,
+        ]);
+    }
+
+    public function deleteCover(string $id): Novel
+    {
+        $novel = $this->novelRepository->findByIdOrFail($id);
+
+        if ($novel->cover_path) {
+            Storage::disk('public')->delete($novel->cover_path);
+            Storage::disk('public')->delete($novel->cover_thumbnail_path);
+        }
+
+        return $this->novelRepository->update($id, [
+            'cover_path'           => null,
+            'cover_thumbnail_path' => null,
+        ]);
     }
 }

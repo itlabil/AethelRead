@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -82,12 +83,11 @@ fun EntityListScreen(
                 title = {
                     Column {
                         Text(
-                            text  = novelName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text  = "${uiState.matches.size} entities found",
+                            text  = if (uiState.isShowingScanResult) {
+                                "${uiState.matches.size} recognized"
+                            } else {
+                                "${uiState.matches.size} entities"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -103,6 +103,18 @@ fun EntityListScreen(
                     }
                 },
                 actions = {
+                    if (uiState.isShowingScanResult) {
+                        IconButton(
+                            onClick = { viewModel.onEvent(EntityListEvent.ShowAllEntities) }
+                        ) {
+                            Icon(
+                                imageVector        = Icons.Default.List,
+                                contentDescription = "Show All Entities",
+                                tint               = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        }
+                    }
+
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier
@@ -136,14 +148,22 @@ fun EntityListScreen(
             OfflineBanner(isVisible = uiState.isOffline)
 
             when {
-                uiState.isScanning -> {
+                uiState.isScanning || (uiState.isLoading && uiState.matches.isEmpty()) -> {
                     LoadingIndicator()
                 }
 
                 uiState.matches.isEmpty() -> {
                     EmptyState(
-                        title    = "No entities recognized",
-                        subtitle = "Tap Scan on the floating bubble to scan screen text",
+                        title    = if (uiState.isShowingScanResult) {
+                            "No entities recognized"
+                        } else {
+                            "No entities found"
+                        },
+                        subtitle = if (uiState.isShowingScanResult) {
+                            "Tap Scan on the floating bubble to scan screen text"
+                        } else {
+                            "Try syncing or check back later"
+                        },
                     )
                 }
 
@@ -158,8 +178,9 @@ fun EntityListScreen(
                             key   = { it.entity.slug },
                         ) { match ->
                             EntityMatchCard(
-                                match   = match,
-                                onClick = { onEntityClick(match.entity) },
+                                match     = match,
+                                onClick   = { onEntityClick(match.entity) },
+                                showBadge = uiState.isShowingScanResult,
                             )
                         }
                     }
@@ -173,6 +194,7 @@ fun EntityListScreen(
 private fun EntityMatchCard(
     match: RecognitionMatch,
     onClick: () -> Unit,
+    showBadge: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -201,10 +223,10 @@ private fun EntityMatchCard(
             ) {
                 if (match.entity.image?.thumbnailUrl != null) {
                     AsyncImage(
-                        model             = match.entity.image.thumbnailUrl,
+                        model              = match.entity.image.thumbnailUrl,
                         contentDescription = match.entity.name,
-                        contentScale      = ContentScale.Crop,
-                        modifier          = Modifier.fillMaxSize(),
+                        contentScale       = ContentScale.Crop,
+                        modifier           = Modifier.fillMaxSize(),
                     )
                 } else {
                     Text(
@@ -233,7 +255,7 @@ private fun EntityMatchCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (match.matchType != MatchType.MAIN_NAME) {
+                if (showBadge && match.matchType != MatchType.MAIN_NAME) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text  = "Matched: ${match.matchedText}",
@@ -243,8 +265,10 @@ private fun EntityMatchCard(
                 }
             }
 
-            // Match type badge
-            MatchTypeBadge(matchType = match.matchType)
+            // Match type badge — hanya tampil saat scan result
+            if (showBadge) {
+                MatchTypeBadge(matchType = match.matchType)
+            }
         }
     }
 }
